@@ -34,7 +34,7 @@ class WebSocketWrapper: WebSocketDelegate {
     var connected: Bool
     let url: URL
     var session: [String: Any]
-    let webSocket: WebSocket
+    let webSocket: MixpanelWebSocket
     let commandQueue: OperationQueue
     var recordingView: UIView? = nil
     var indeterminateLayer: CALayer? = nil
@@ -56,7 +56,7 @@ class WebSocketWrapper: WebSocketDelegate {
         commandQueue.maxConcurrentOperationCount = 1
         commandQueue.isSuspended = true
 
-        webSocket = WebSocket(url: url)
+        webSocket = MixpanelWebSocket(url: url)
         webSocket.delegate = self
 
         if keepTrying {
@@ -227,7 +227,7 @@ class WebSocketWrapper: WebSocketDelegate {
         connectivityIndiciatorWindow = nil
     }
 
-    func websocketDidReceiveMessage(_ socket: WebSocket, text: String) {
+    func websocketDidReceiveMessage(_ socket: MixpanelWebSocket, text: String) {
         var shouldShowUI = false
         if !connected {
             connected = true
@@ -251,7 +251,7 @@ class WebSocketWrapper: WebSocketDelegate {
         }
     }
 
-    func websocketDidReceiveData(_ socket: WebSocket, data: Data) {
+    func websocketDidReceiveData(_ socket: MixpanelWebSocket, data: Data) {
         var shouldShowUI = false
         if !connected {
             connected = true
@@ -275,12 +275,12 @@ class WebSocketWrapper: WebSocketDelegate {
 
     }
 
-    func websocketDidConnect(_ socket: WebSocket) {
+    func websocketDidConnect(_ socket: MixpanelWebSocket) {
         Logger.info(message: "WebSocket \(socket) did open")
         commandQueue.isSuspended = false
     }
 
-    func websocketDidDisconnect(_ socket: WebSocket, error: NSError?) {
+    func websocketDidDisconnect(_ socket: MixpanelWebSocket, error: NSError?) {
         if let error = error {
             Logger.debug(message: "WebSocket disconnected because of: \(error.description)")
         }

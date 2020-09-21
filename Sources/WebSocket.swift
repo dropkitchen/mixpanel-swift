@@ -28,17 +28,17 @@ let WebsocketDidDisconnectNotification = "WebsocketDidDisconnectNotification"
 let WebsocketDisconnectionErrorKeyName = "WebsocketDisconnectionErrorKeyName"
 
 protocol WebSocketDelegate: class {
-    func websocketDidConnect(_ socket: WebSocket)
-    func websocketDidDisconnect(_ socket: WebSocket, error: NSError?)
-    func websocketDidReceiveMessage(_ socket: WebSocket, text: String)
-    func websocketDidReceiveData(_ socket: WebSocket, data: Data)
+    func websocketDidConnect(_ socket: MixpanelWebSocket)
+    func websocketDidDisconnect(_ socket: MixpanelWebSocket, error: NSError?)
+    func websocketDidReceiveMessage(_ socket: MixpanelWebSocket, text: String)
+    func websocketDidReceiveData(_ socket: MixpanelWebSocket, data: Data)
 }
 
 protocol WebSocketPongDelegate: class {
-    func websocketDidReceivePong(_ socket: WebSocket)
+    func websocketDidReceivePong(_ socket: MixpanelWebSocket)
 }
 
-class WebSocket: NSObject, StreamDelegate {
+class MixpanelWebSocket: NSObject, StreamDelegate {
 
     enum OpCode: UInt8 {
         case continueFrame = 0x0
@@ -317,8 +317,8 @@ class WebSocket: NSObject, StreamDelegate {
             }
         }
 
-        CFReadStreamSetDispatchQueue(inStream, WebSocket.sharedWorkQueue)
-        CFWriteStreamSetDispatchQueue(outStream, WebSocket.sharedWorkQueue)
+        CFReadStreamSetDispatchQueue(inStream, MixpanelWebSocket.sharedWorkQueue)
+        CFWriteStreamSetDispatchQueue(outStream, MixpanelWebSocket.sharedWorkQueue)
         inStream.open()
         outStream.open()
 
@@ -571,7 +571,7 @@ class WebSocket: NSObject, StreamDelegate {
                 if payloadLen == 1 {
                     code = CloseCode.protocolError.rawValue
                 } else if payloadLen > 1 {
-                    code = WebSocket.readUint16(baseAddress, offset: offset)
+                    code = MixpanelWebSocket.readUint16(baseAddress, offset: offset)
                     if code < 1000 || (code > 1003 && code < 1007) || (code > 1011 && code < 3000) {
                         code = CloseCode.protocolError.rawValue
                     }
@@ -599,10 +599,10 @@ class WebSocket: NSObject, StreamDelegate {
             }
             var dataLength = UInt64(payloadLen)
             if dataLength == 127 {
-                dataLength = WebSocket.readUint64(baseAddress, offset: offset)
+                dataLength = MixpanelWebSocket.readUint64(baseAddress, offset: offset)
                 offset += MemoryLayout<UInt64>.size
             } else if dataLength == 126 {
-                dataLength = UInt64(WebSocket.readUint16(baseAddress, offset: offset))
+                dataLength = UInt64(MixpanelWebSocket.readUint16(baseAddress, offset: offset))
                 offset += MemoryLayout<UInt16>.size
             }
             if bufferLen < offset || UInt64(bufferLen - offset) < dataLength {
@@ -722,13 +722,13 @@ class WebSocket: NSObject, StreamDelegate {
     private func errorWithDetail(_ detail: String, code: UInt16) -> NSError {
         var details = [String: String]()
         details[NSLocalizedDescriptionKey] =  detail
-        return NSError(domain: WebSocket.ErrorDomain, code: Int(code), userInfo: details)
+        return NSError(domain: MixpanelWebSocket.ErrorDomain, code: Int(code), userInfo: details)
     }
 
     private func writeError(_ code: UInt16) {
         let buf = NSMutableData(capacity: MemoryLayout<UInt16>.size)
         let buffer = UnsafeMutableRawPointer(mutating: buf!.bytes).assumingMemoryBound(to: UInt8.self)
-        WebSocket.writeUint16(buffer, offset: 0, value: code)
+        MixpanelWebSocket.writeUint16(buffer, offset: 0, value: code)
         dequeueWrite(Data(bytes: buffer, count: MemoryLayout<UInt16>.size), code: .connectionClose)
     }
 
@@ -745,11 +745,11 @@ class WebSocket: NSObject, StreamDelegate {
                 buffer[1] = CUnsignedChar(dataLength)
             } else if dataLength <= Int(UInt16.max) {
                 buffer[1] = 126
-                WebSocket.writeUint16(buffer, offset: offset, value: UInt16(dataLength))
+                MixpanelWebSocket.writeUint16(buffer, offset: offset, value: UInt16(dataLength))
                 offset += MemoryLayout<UInt16>.size
             } else {
                 buffer[1] = 127
-                WebSocket.writeUint64(buffer, offset: offset, value: UInt64(dataLength))
+                MixpanelWebSocket.writeUint64(buffer, offset: offset, value: UInt64(dataLength))
                 offset += MemoryLayout<UInt64>.size
             }
             buffer[1] |= s.MaskMask
